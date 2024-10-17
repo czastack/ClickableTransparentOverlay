@@ -33,10 +33,6 @@
         private ResourceSet _fontTextureResourceSet;
 
         private readonly IntPtr _fontAtlasID = (IntPtr)1;
-        private bool _controlDown;
-        private bool _shiftDown;
-        private bool _altDown;
-        private bool _winKeyDown;
 
         private int _windowWidth;
         private int _windowHeight;
@@ -61,7 +57,6 @@
             _windowHeight = height;
 
             ImGui.CreateContext();
-            SetKeyMappings();
             SetPerFrameImGuiData(1f / 60f);
         }
 
@@ -345,6 +340,172 @@
             io.DeltaTime = deltaSeconds; // DeltaTime is in seconds.
         }
 
+        private bool TryMapKey(Key key, out ImGuiKey result)
+        {
+            ImGuiKey KeyToImGuiKeyShortcut(Key keyToConvert, Key startKey1, ImGuiKey startKey2)
+            {
+                int changeFromStart1 = (int)keyToConvert - (int)startKey1;
+                return startKey2 + changeFromStart1;
+            }
+
+            result = ImGuiKey.None; // 默认值设为 ImGuiKey.None
+            if (key >= Key.F1 && key <= Key.F24)
+            {
+                result = KeyToImGuiKeyShortcut(key, Key.F1, ImGuiKey.F1);
+            }
+            else if (key >= Key.Keypad0 && key <= Key.Keypad9)
+            {
+                result = KeyToImGuiKeyShortcut(key, Key.Keypad0, ImGuiKey.Keypad0);
+            }
+            else if (key >= Key.A && key <= Key.Z)
+            {
+                result = KeyToImGuiKeyShortcut(key, Key.A, ImGuiKey.A);
+            }
+            else if (key >= Key.Number0 && key <= Key.Number9)
+            {
+                result = KeyToImGuiKeyShortcut(key, Key.Number0, ImGuiKey._0);
+            }
+            else
+            {
+                switch (key)
+                {
+                    case Key.ShiftLeft:
+                    case Key.ShiftRight:
+                        result = ImGuiKey.ModShift;
+                        break;
+                    case Key.ControlLeft:
+                    case Key.ControlRight:
+                        result = ImGuiKey.ModCtrl;
+                        break;
+                    case Key.AltLeft:
+                    case Key.AltRight:
+                        result = ImGuiKey.ModAlt;
+                        break;
+                    case Key.WinLeft:
+                    case Key.WinRight:
+                        result = ImGuiKey.ModSuper;
+                        break;
+                    case Key.Menu:
+                        result = ImGuiKey.Menu;
+                        break;
+                    case Key.Up:
+                        result = ImGuiKey.UpArrow;
+                        break;
+                    case Key.Down:
+                        result = ImGuiKey.DownArrow;
+                        break;
+                    case Key.Left:
+                        result = ImGuiKey.LeftArrow;
+                        break;
+                    case Key.Right:
+                        result = ImGuiKey.RightArrow;
+                        break;
+                    case Key.Enter:
+                        result = ImGuiKey.Enter;
+                        break;
+                    case Key.Escape:
+                        result = ImGuiKey.Escape;
+                        break;
+                    case Key.Space:
+                        result = ImGuiKey.Space;
+                        break;
+                    case Key.Tab:
+                        result = ImGuiKey.Tab;
+                        break;
+                    case Key.BackSpace:
+                        result = ImGuiKey.Backspace;
+                        break;
+                    case Key.Insert:
+                        result = ImGuiKey.Insert;
+                        break;
+                    case Key.Delete:
+                        result = ImGuiKey.Delete;
+                        break;
+                    case Key.PageUp:
+                        result = ImGuiKey.PageUp;
+                        break;
+                    case Key.PageDown:
+                        result = ImGuiKey.PageDown;
+                        break;
+                    case Key.Home:
+                        result = ImGuiKey.Home;
+                        break;
+                    case Key.End:
+                        result = ImGuiKey.End;
+                        break;
+                    case Key.CapsLock:
+                        result = ImGuiKey.CapsLock;
+                        break;
+                    case Key.ScrollLock:
+                        result = ImGuiKey.ScrollLock;
+                        break;
+                    case Key.PrintScreen:
+                        result = ImGuiKey.PrintScreen;
+                        break;
+                    case Key.Pause:
+                        result = ImGuiKey.Pause;
+                        break;
+                    case Key.NumLock:
+                        result = ImGuiKey.NumLock;
+                        break;
+                    case Key.KeypadDivide:
+                        result = ImGuiKey.KeypadDivide;
+                        break;
+                    case Key.KeypadMultiply:
+                        result = ImGuiKey.KeypadMultiply;
+                        break;
+                    case Key.KeypadSubtract:
+                        result = ImGuiKey.KeypadSubtract;
+                        break;
+                    case Key.KeypadAdd:
+                        result = ImGuiKey.KeypadAdd;
+                        break;
+                    case Key.KeypadDecimal:
+                        result = ImGuiKey.KeypadDecimal;
+                        break;
+                    case Key.KeypadEnter:
+                        result = ImGuiKey.KeypadEnter;
+                        break;
+                    case Key.Tilde:
+                        result = ImGuiKey.GraveAccent;
+                        break;
+                    case Key.Minus:
+                        result = ImGuiKey.Minus;
+                        break;
+                    case Key.Plus:
+                        result = ImGuiKey.Equal;
+                        break;
+                    case Key.BracketLeft:
+                        result = ImGuiKey.LeftBracket;
+                        break;
+                    case Key.BracketRight:
+                        result = ImGuiKey.RightBracket;
+                        break;
+                    case Key.Semicolon:
+                        result = ImGuiKey.Semicolon;
+                        break;
+                    case Key.Quote:
+                        result = ImGuiKey.Apostrophe;
+                        break;
+                    case Key.Comma:
+                        result = ImGuiKey.Comma;
+                        break;
+                    case Key.Period:
+                        result = ImGuiKey.Period;
+                        break;
+                    case Key.Slash:
+                        result = ImGuiKey.Slash;
+                        break;
+                    case Key.BackSlash:
+                    case Key.NonUSBackSlash:
+                        result = ImGuiKey.Backslash;
+                        break;
+                }
+            }
+
+            return result != ImGuiKey.None;
+        }
+
         private void UpdateImGuiInput(InputSnapshot snapshot, IntPtr handle)
         {
             ImGuiIOPtr io = ImGui.GetIO();
@@ -393,33 +554,14 @@
                 io.AddInputCharacter(c);
             }
 
-            IReadOnlyList<KeyEvent> keyEvents = snapshot.KeyEvents;
-            for (int i = 0; i < keyEvents.Count; i++)
+            for (int i = 0; i < snapshot.KeyEvents.Count; i++)
             {
-                KeyEvent keyEvent = keyEvents[i];
-                io.KeysDown[(int)keyEvent.Key] = keyEvent.Down;
-                if (keyEvent.Key == Key.ControlLeft)
+                KeyEvent keyEvent = snapshot.KeyEvents[i];
+                if (TryMapKey(keyEvent.Key, out ImGuiKey imguikey))
                 {
-                    _controlDown = keyEvent.Down;
-                }
-                if (keyEvent.Key == Key.ShiftLeft)
-                {
-                    _shiftDown = keyEvent.Down;
-                }
-                if (keyEvent.Key == Key.AltLeft)
-                {
-                    _altDown = keyEvent.Down;
-                }
-                if (keyEvent.Key == Key.WinLeft)
-                {
-                    _winKeyDown = keyEvent.Down;
+                    io.AddKeyEvent(imguikey, keyEvent.Down);
                 }
             }
-
-            io.KeyCtrl = _controlDown;
-            io.KeyAlt = _altDown;
-            io.KeyShift = _shiftDown;
-            io.KeySuper = _winKeyDown;
 
             if (io.WantCaptureKeyboard || io.WantCaptureMouse)
             {
@@ -429,31 +571,6 @@
             {
                 NativeMethods.SetOverlayClickable(handle, false);
             }
-        }
-
-        private static void SetKeyMappings()
-        {
-            ImGuiIOPtr io = ImGui.GetIO();
-            io.KeyMap[(int)ImGuiKey.Tab] = (int)Key.Tab;
-            io.KeyMap[(int)ImGuiKey.LeftArrow] = (int)Key.Left;
-            io.KeyMap[(int)ImGuiKey.RightArrow] = (int)Key.Right;
-            io.KeyMap[(int)ImGuiKey.UpArrow] = (int)Key.Up;
-            io.KeyMap[(int)ImGuiKey.DownArrow] = (int)Key.Down;
-            io.KeyMap[(int)ImGuiKey.PageUp] = (int)Key.PageUp;
-            io.KeyMap[(int)ImGuiKey.PageDown] = (int)Key.PageDown;
-            io.KeyMap[(int)ImGuiKey.Home] = (int)Key.Home;
-            io.KeyMap[(int)ImGuiKey.End] = (int)Key.End;
-            io.KeyMap[(int)ImGuiKey.Delete] = (int)Key.Delete;
-            io.KeyMap[(int)ImGuiKey.Backspace] = (int)Key.BackSpace;
-            io.KeyMap[(int)ImGuiKey.Enter] = (int)Key.Enter;
-            io.KeyMap[(int)ImGuiKey.Escape] = (int)Key.Escape;
-            io.KeyMap[(int)ImGuiKey.Space] = (int)Key.Space;
-            io.KeyMap[(int)ImGuiKey.A] = (int)Key.A;
-            io.KeyMap[(int)ImGuiKey.C] = (int)Key.C;
-            io.KeyMap[(int)ImGuiKey.V] = (int)Key.V;
-            io.KeyMap[(int)ImGuiKey.X] = (int)Key.X;
-            io.KeyMap[(int)ImGuiKey.Y] = (int)Key.Y;
-            io.KeyMap[(int)ImGuiKey.Z] = (int)Key.Z;
         }
 
         private void RenderImDrawData(ImDrawDataPtr draw_data, GraphicsDevice gd, CommandList cl)
@@ -482,7 +599,7 @@
 
             for (int i = 0; i < draw_data.CmdListsCount; i++)
             {
-                ImDrawListPtr cmd_list = draw_data.CmdListsRange[i];
+                ImDrawListPtr cmd_list = draw_data.CmdLists[i];
 
                 cl.UpdateBuffer(
                     _vertexBuffer,
@@ -524,7 +641,7 @@
             int idx_offset = 0;
             for (int n = 0; n < draw_data.CmdListsCount; n++)
             {
-                ImDrawListPtr cmd_list = draw_data.CmdListsRange[n];
+                ImDrawListPtr cmd_list = draw_data.CmdLists[n];
                 for (int cmd_i = 0; cmd_i < cmd_list.CmdBuffer.Size; cmd_i++)
                 {
                     ImDrawCmdPtr pcmd = cmd_list.CmdBuffer[cmd_i];
