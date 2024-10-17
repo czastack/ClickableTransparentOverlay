@@ -247,6 +247,15 @@
         }
 
         /// <summary>
+        /// Show or hide the overlay.
+        /// </summary>
+        public bool Visible
+        {
+            get => window.Visible;
+            set => window.Visible = value;
+        }
+
+        /// <summary>
         /// Adds the image to the Graphic Device as a texture.
         /// Then returns the pointer of the added texture. It also
         /// cache the image internally rather than creating a new texture on every call,

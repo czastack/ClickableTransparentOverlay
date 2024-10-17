@@ -2,7 +2,6 @@
 {
     using System;
     using System.Diagnostics;
-    using System.Drawing;
     using System.Numerics;
     using System.Runtime.InteropServices;
 
@@ -41,7 +40,13 @@
             GWL_EXSTYLE_NOT_CLICKABLE = new IntPtr(
                 GWL_EXSTYLE_CLICKABLE.ToInt64() | WS_EX_LAYERED | WS_EX_TRANSPARENT);
 
-            Margins margins = Margins.FromRectangle(new Rectangle(-1, -1, -1, -1));
+            Margins margins = new Margins
+            {
+                Left = -1,
+                Right = -1,
+                Top = -1,
+                Bottom = -1
+            };
             DwmExtendFrameIntoClientArea(handle, ref margins);
         }
 
@@ -171,22 +176,10 @@
         [StructLayout(LayoutKind.Sequential)]
         private struct Margins
         {
-            private int left;
-            private int right;
-            private int top;
-            private int bottom;
-
-            public static Margins FromRectangle(Rectangle rectangle)
-            {
-                var margins = new Margins
-                {
-                    left = rectangle.Left,
-                    right = rectangle.Right,
-                    top = rectangle.Top,
-                    bottom = rectangle.Bottom,
-                };
-                return margins;
-            }
+            public int Left;
+            public int Right;
+            public int Top;
+            public int Bottom;
         }
 
         [StructLayout(LayoutKind.Sequential)]
@@ -197,13 +190,8 @@
 
             public POINT(int x, int y)
             {
-                this.X = x;
-                this.Y = y;
-            }
-
-            public static implicit operator Point(POINT p)
-            {
-                return new Point(p.X, p.Y);
+                X = x;
+                Y = y;
             }
 
             public static implicit operator Vector2(POINT p)
