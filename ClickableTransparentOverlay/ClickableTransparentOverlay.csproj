@@ -1,8 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net48</TargetFramework>
-	<GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <TargetFramework>net472</TargetFramework>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <Version>3.5.1</Version>
     <Authors>Zaafar</Authors>
     <Product />
@@ -10,11 +10,12 @@
     <Description>A library to create transparent overlays on the windows machines.</Description>
     <PackageProjectUrl>https://github.com/zaafar/ClickableTransparentOverlay</PackageProjectUrl>
     <PackageTags>Transparent Overlay</PackageTags>
-    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <!-- <GeneratePackageOnBuild>true</GeneratePackageOnBuild> -->
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
     <PackageLicenseFile>LICENSE</PackageLicenseFile>
     <AssemblyVersion>3.5.0.0</AssemblyVersion>
     <FileVersion>3.5.0.0</FileVersion>
+    <PlatformTarget>x64</PlatformTarget>
   </PropertyGroup>
 
   <ItemGroup>
@@ -31,10 +32,10 @@
 
   <ItemGroup>
     <PackageReference Include="ImGui.NET" Version="1.78.0" />
-    <PackageReference Include="Veldrid" Version="4.9.0-g3839ab315a" />
-    <PackageReference Include="Veldrid.ImageSharp" Version="4.9.0-g3839ab315a" />
-    <PackageReference Include="Veldrid.Sdl2" Version="4.9.0-g3839ab315a" />
-    <PackageReference Include="Veldrid.StartupUtilities" Version="4.9.0-g3839ab315a" />
+    <PackageReference Include="Veldrid" Version="4.9.0" />
+    <PackageReference Include="Veldrid.ImageSharp" Version="4.9.0" />
+    <PackageReference Include="Veldrid.Sdl2" Version="4.9.0" />
+    <PackageReference Include="Veldrid.StartupUtilities" Version="4.9.0" />
   </ItemGroup>
 
 </Project>

@@ -63,7 +63,8 @@
             cancellationTokenSource = new CancellationTokenSource();
             renderThread = new Thread(async () =>
             {
-                window = new Sdl2Window("Overlay", 0, 0, 2560, 1440, this.windowFlags, false);
+                NativeMethods.GetSystemMetrics(out int width, out int height);
+                window = new Sdl2Window("Overlay", 0, 0, width, height, this.windowFlags, false);
                 graphicsDevice = VeldridStartup.CreateGraphicsDevice(window,
                     new GraphicsDeviceOptions(false, null, true),
                     GraphicsBackend.Direct3D11);
@@ -87,10 +88,10 @@
                     overlayIsReady = true;
                 }
 
-                PostStart();
-                await RunInfiniteLoop(cancellationTokenSource.Token);
+                await PostInitialized();
+                RunInfiniteLoop(cancellationTokenSource.Token);
             });
-            
+
             renderThread.Start();
             await WaitHelpers.SpinWait(() => overlayIsReady);
         }
@@ -112,7 +113,7 @@
         /// <summary>
         /// Infinitely calls the Render task until the overlay closes.
         /// </summary>
-        private async Task RunInfiniteLoop(CancellationToken cancellationToken)
+        private void RunInfiniteLoop(CancellationToken cancellationToken)
         {
             var stopwatch = Stopwatch.StartNew();
             while (window.Exists && !cancellationToken.IsCancellationRequested)
@@ -127,8 +128,8 @@
                 var deltaSeconds = (float)stopwatch.ElapsedTicks / Stopwatch.Frequency;
                 stopwatch.Restart();
                 imController.Update(deltaSeconds, snapshot, window.Handle);
-                
-                await Render();
+
+                Render();
 
                 commandList.Begin();
                 commandList.SetFramebuffer(graphicsDevice.MainSwapchain.Framebuffer);
@@ -147,7 +148,7 @@
         /// Abstract Task for creating the UI.
         /// </summary>
         /// <returns>Task that finishes once per frame</returns>
-        protected abstract Task Render();
+        protected abstract void Render();
 
         /// <summary>
         /// Adds default font to the ImGui.
@@ -162,7 +163,9 @@
         /// <summary>
         /// Steps to execute after the overlay has fully initialized.
         /// </summary>
-        protected virtual void PostStart() { }
+        protected virtual Task PostInitialized() {
+            return Task.CompletedTask;
+        }
 
         /// <summary>
         /// Safely Closes the Overlay.
@@ -228,6 +231,18 @@
             set
             {
                 Sdl2Native.SDL_SetWindowSize(window.SdlWindowHandle, value.X, value.Y);
+            }
+        }
+
+        /// <summary>
+        /// Gets the dpi scale of the overlay window.
+        /// </summary>
+        public float DpiScale
+        {
+            get
+            {
+                int dpi = NativeMethods.GetDpiForWindow(window.Handle);
+                return dpi > 0 ? dpi / 96f : 1.0f;
             }
         }
 

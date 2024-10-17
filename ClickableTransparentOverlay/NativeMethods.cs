@@ -83,6 +83,12 @@
             return Vector2.Zero;
         }
 
+        internal static void GetSystemMetrics(out int width, out int height)
+        {
+            width = GetSystemMetrics(SM_CXSCREEN);
+            height = GetSystemMetrics(SM_CYSCREEN);
+        }
+
         /// <summary>
         /// Returns true if the key is pressed.
         /// For keycode information visit: https://www.pinvoke.net/default.aspx/user32.getkeystate.
@@ -152,6 +158,15 @@
 
         [DllImport("user32.dll", EntryPoint = "SetWindowLongPtr")]
         private static extern IntPtr SetWindowLongPtr(IntPtr hWnd, int nIndex, IntPtr dwNewLong);
+
+        [DllImport("user32.dll")]
+        internal static extern int GetDpiForWindow(IntPtr hWnd);
+
+        private const int SM_CXSCREEN = 0;
+        private const int SM_CYSCREEN = 1;
+
+        [DllImport("user32.dll")]
+        private static extern int GetSystemMetrics(int nIndex);
 
         [StructLayout(LayoutKind.Sequential)]
         private struct Margins
