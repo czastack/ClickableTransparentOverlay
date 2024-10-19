@@ -17,6 +17,7 @@
     {
         private GraphicsDevice _gd;
         private bool _frameBegun;
+        private bool lastWantCaptureMouse;
 
         // Veldrid objects
         private DeviceBuffer _vertexBuffer;
@@ -563,13 +564,10 @@
                 }
             }
 
-            if (io.WantCaptureKeyboard || io.WantCaptureMouse)
+            if (lastWantCaptureMouse != io.WantCaptureMouse)
             {
-                NativeMethods.SetOverlayClickable(handle, true);
-            }
-            else
-            {
-                NativeMethods.SetOverlayClickable(handle, false);
+                lastWantCaptureMouse = io.WantCaptureMouse;
+                NativeMethods.SetOverlayClickable(handle, lastWantCaptureMouse);
             }
         }
 

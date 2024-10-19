@@ -34,6 +34,11 @@
         private volatile bool overlayIsReady;
 
         /// <summary>
+        /// Get the window of the overlay
+        /// </summary>
+        public Sdl2Window Window => window;
+
+        /// <summary>
         /// Initializes a new instance of the <see cref="Overlay"/> class.
         /// </summary>
         public Overlay()
@@ -251,8 +256,17 @@
         /// </summary>
         public bool Visible
         {
-            get => window.Visible;
-            set => window.Visible = value;
+            get
+            {
+                return window != null ? window.Visible : false;
+            }
+            set
+            {
+                if (window != null)
+                {
+                    window.Visible = value;
+                }
+            }
         }
 
         /// <summary>
