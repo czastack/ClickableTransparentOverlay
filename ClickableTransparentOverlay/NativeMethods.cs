@@ -13,6 +13,7 @@
         private const int GWL_EXSTYLE = -20;
         private const int WS_EX_LAYERED = 0x80000;
         private const int WS_EX_TRANSPARENT = 0x20;
+        private const int WS_EX_TOOLWINDOW = 0x80;
 
         private static bool isClickable = true;
         private static IntPtr GWL_EXSTYLE_CLICKABLE = IntPtr.Zero;
@@ -38,7 +39,7 @@
         {
             GWL_EXSTYLE_CLICKABLE = GetWindowLongPtr(handle, GWL_EXSTYLE);
             GWL_EXSTYLE_NOT_CLICKABLE = new IntPtr(
-                GWL_EXSTYLE_CLICKABLE.ToInt64() | WS_EX_LAYERED | WS_EX_TRANSPARENT);
+                GWL_EXSTYLE_CLICKABLE.ToInt64() | WS_EX_LAYERED | WS_EX_TRANSPARENT | WS_EX_TOOLWINDOW);
 
             Margins margins = new Margins
             {
