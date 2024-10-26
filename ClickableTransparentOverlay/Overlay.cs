@@ -1,9 +1,6 @@
 ﻿namespace ClickableTransparentOverlay
 {
     using ClickableTransparentOverlay.Win32;
-    using SixLabors.ImageSharp;
-    using SixLabors.ImageSharp.PixelFormats;
-    using SixLabors.ImageSharp.Formats;
     using System;
     using System.Collections.Generic;
     using System.Diagnostics;
@@ -33,11 +30,15 @@
 
         private WNDCLASSEX wndClass;
 
+        private const int SM_CXSCREEN = 0;
+        private const int SM_CYSCREEN = 1;
+
+#nullable disable
         /// <summary>
         ///  Do not assume this class is initialized.
         ///  Consider using this variable only in <see cref="PostInitialized"/> or <see cref="Render"/> function.
         /// </summary>
-        public Win32Window window;
+        private Win32Window window;
         private ID3D11Device device;
         private ID3D11DeviceContext deviceContext;
         private IDXGISwapChain swapChain;
@@ -46,16 +47,19 @@
 
         private ImGuiRenderer renderer;
         private ImGuiInputHandler inputhandler;
+        private Thread renderThread;
+#nullable enable
 
         private bool _disposedValue;
         private IntPtr selfPointer;
-        private Thread renderThread;
         private volatile CancellationTokenSource cancellationTokenSource;
         private volatile bool overlayIsReady;
 
         private Dictionary<string, (IntPtr Handle, uint Width, uint Height)> loadedTexturesPtrs;
 
         private readonly ConcurrentQueue<FontHelper.FontLoadDelegate> fontUpdates;
+
+        public Win32Window Window => window;
 
         #region Constructors
 
@@ -95,7 +99,7 @@
         /// <param name="DPIAware">
         /// should the overlay scale with windows scale value or not.
         /// </param>
-        public Overlay(string windowTitle, bool DPIAware) : this(windowTitle, DPIAware, 800, 600)
+        public Overlay(string windowTitle, bool DPIAware) : this(windowTitle, DPIAware, -1, -1)
         {
         }
 
@@ -148,6 +152,18 @@
         /// </param>
         public Overlay(string windowTitle, bool DPIAware, int windowWidth, int windowHeight)
         {
+            if (DPIAware)
+            {
+                User32.SetProcessDPIAware();
+            }
+            if (windowWidth == -1)
+            {
+                windowWidth = User32.GetSystemMetrics(SM_CXSCREEN);
+            }
+            if (windowHeight == -1)
+            {
+                windowHeight = User32.GetSystemMetrics(SM_CYSCREEN);
+            }
             this.initialWindowWidth = windowWidth;
             this.initialWindowHeight = windowHeight;
             this.VSync = true;
@@ -158,10 +174,6 @@
             this.format = Format.R8G8B8A8_UNorm;
             this.loadedTexturesPtrs = new();
             this.fontUpdates = new();
-            if (DPIAware)
-            {
-                User32.SetProcessDPIAware();
-            }
         }
 
         #endregion
@@ -365,56 +377,14 @@
         }
 
         /// <summary>
-        /// Adds the image to the Graphic Device as a texture.
-        /// Then returns the pointer of the added texture. It also
-        /// cache the image internally rather than creating a new texture on every call,
-        /// so this function can be called multiple times per frame.
+        /// Gets the dpi scale of the overlay window.
         /// </summary>
-        /// <param name="filePath">Path to the image on disk.</param>
-        /// <param name="srgb"> a value indicating whether pixel format is srgb or not.</param>
-        /// <param name="handle">output pointer to the image in the graphic device.</param>
-        /// <param name="width">width of the loaded texture.</param>
-        /// <param name="height">height of the loaded texture.</param>
-        public void AddOrGetImagePointer(string filePath, bool srgb, out IntPtr handle, out uint width, out uint height)
+        public float DpiScale
         {
-            if (this.loadedTexturesPtrs.TryGetValue(filePath, out var data))
+            get
             {
-                handle = data.Handle;
-                width = data.Width;
-                height = data.Height;
-            }
-            else
-            {
-                var decorderOptions = new DecoderOptions();
-                decorderOptions.Configuration.PreferContiguousImageBuffers = true;
-                using var image = Image.Load<Rgba32>(decorderOptions, filePath);
-                handle = this.renderer.CreateImageTexture(image, srgb ? Format.R8G8B8A8_UNorm_SRgb : Format.R8G8B8A8_UNorm);
-                width = (uint)image.Width;
-                height = (uint)image.Height;
-                this.loadedTexturesPtrs.Add(filePath, new(handle, width, height));
-            }
-        }
-
-        /// <summary>
-        /// Adds the image to the Graphic Device as a texture.
-        /// Then returns the pointer of the added texture. It also
-        /// cache the image internally rather than creating a new texture on every call,
-        /// so this function can be called multiple times per frame.
-        /// </summary>
-        /// <param name="name">user friendly name given to the image.</param>
-        /// <param name="image">Image data in <see cref="Image"> format.</param>
-        /// <param name="srgb"> a value indicating whether pixel format is srgb or not.</param>
-        /// <param name="handle">output pointer to the image in the graphic device.</param>
-        public void AddOrGetImagePointer(string name, Image<Rgba32> image, bool srgb, out IntPtr handle)
-        {
-            if (this.loadedTexturesPtrs.TryGetValue(name, out var data))
-            {
-                handle = data.Handle;
-            }
-            else
-            {
-                handle = this.renderer.CreateImageTexture(image, srgb ? Format.R8G8B8A8_UNorm_SRgb : Format.R8G8B8A8_UNorm);
-                this.loadedTexturesPtrs.Add(name, new(handle, (uint)image.Width, (uint)image.Height));
+                int dpi = User32.GetDpiForWindow(window.Handle);
+                return dpi > 0 ? dpi / 96f : 1.0f;
             }
         }
 
@@ -425,8 +395,9 @@
         /// <returns> true if the image is removed otherwise false.</returns>
         public bool RemoveImage(string key)
         {
-            if (this.loadedTexturesPtrs.Remove(key, out var data))
+            if (this.loadedTexturesPtrs.TryGetValue(key, out var data))
             {
+                this.loadedTexturesPtrs.Remove(key);
                 return this.renderer.RemoveImageTexture(data.Handle);
             }
 
@@ -451,7 +422,13 @@
                 }
 
                 this.cancellationTokenSource?.Dispose();
-                this.fontUpdates?.Clear();
+                // this.fontUpdates?.Clear();
+                if (this.fontUpdates != null)
+                {
+                    while (this.fontUpdates.TryDequeue(out var item))
+                    {
+                    }
+                }
                 this.swapChain?.Release();
                 this.backBuffer?.Release();
                 this.renderView?.Release();
@@ -493,13 +470,14 @@
             var stopwatch = Stopwatch.StartNew();
             float deltaTime = 0f;
             var clearColor = new Color4(0.0f);
+            Action render = Render;
             while (!token.IsCancellationRequested)
             {
                 deltaTime = stopwatch.ElapsedTicks / (float)Stopwatch.Frequency;
                 stopwatch.Restart();
                 this.window.PumpEvents();
-                Utils.SetOverlayClickable(this.window.Handle, this.inputhandler.Update());
-                this.renderer.Update(deltaTime, () => { Render(); });
+                this.inputhandler.Update();
+                this.renderer.Update(deltaTime, render);
                 this.deviceContext.OMSetRenderTargets(renderView);
                 this.deviceContext.ClearRenderTargetView(renderView, clearColor);
                 this.renderer.Render();
@@ -602,7 +580,7 @@
                 0,
                 this.title,
                 WindowStyles.WS_POPUP,
-                WindowExStyles.WS_EX_ACCEPTFILES | WindowExStyles.WS_EX_TOPMOST);
+                WindowExStyles.WS_EX_ACCEPTFILES | WindowExStyles.WS_EX_TOPMOST | WindowExStyles.WS_EX_TOOLWINDOW);
             this.renderer = new ImGuiRenderer(device, deviceContext, this.initialWindowWidth, this.initialWindowHeight);
             this.inputhandler = new ImGuiInputHandler(this.window.Handle);
             this.overlayIsReady = true;

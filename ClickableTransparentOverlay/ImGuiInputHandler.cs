@@ -8,13 +8,14 @@
     {
         readonly IntPtr hwnd;
         ImGuiMouseCursor lastCursor;
+        private bool lastWantCaptureMouse;
 
         public ImGuiInputHandler(IntPtr hwnd)
         {
             this.hwnd = hwnd;
         }
 
-        public bool Update()
+        public void Update()
         {
             var io = ImGui.GetIO();
             UpdateMousePosition(io, hwnd);
@@ -38,7 +39,11 @@
                 }
             }
 
-            return io.WantCaptureMouse;
+            if (lastWantCaptureMouse != io.WantCaptureMouse)
+            {
+                lastWantCaptureMouse = io.WantCaptureMouse;
+                Utils.SetOverlayClickable(hwnd, lastWantCaptureMouse);
+            }
         }
 
         public bool ProcessMessage(WindowMessage msg, UIntPtr wParam, IntPtr lParam)

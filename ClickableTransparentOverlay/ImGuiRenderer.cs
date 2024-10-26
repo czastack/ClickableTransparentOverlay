@@ -11,30 +11,28 @@
     using System.Collections.Generic;
     using System;
     using System.Linq;
-    using SixLabors.ImageSharp;
-    using SixLabors.ImageSharp.PixelFormats;
     using System.Buffers;
 
     unsafe internal sealed class ImGuiRenderer : IDisposable
     {
         const int VertexConstantBufferSize = 16 * 4;
 
-        ID3D11Device device;
-        ID3D11DeviceContext deviceContext;
-        ID3D11Buffer vertexBuffer;
-        ID3D11Buffer indexBuffer;
-        Blob vertexShaderBlob;
-        ID3D11VertexShader vertexShader;
-        ID3D11InputLayout inputLayout;
-        ID3D11Buffer constantBuffer;
-        Blob pixelShaderBlob;
-        ID3D11PixelShader pixelShader;
-        ID3D11SamplerState fontSampler;
-        ID3D11RasterizerState rasterizerState;
-        ID3D11BlendState blendState;
-        ID3D11DepthStencilState depthStencilState;
-        int vertexBufferSize = 5000, indexBufferSize = 10000;
-        readonly Dictionary<IntPtr, ID3D11ShaderResourceView> textureResources = new();
+        private readonly ID3D11Device device;
+        private readonly ID3D11DeviceContext deviceContext;
+        private ID3D11Buffer? vertexBuffer;
+        private ID3D11Buffer? indexBuffer;
+        private Blob? vertexShaderBlob;
+        private ID3D11VertexShader? vertexShader;
+        private ID3D11InputLayout? inputLayout;
+        private ID3D11Buffer? constantBuffer;
+        private Blob? pixelShaderBlob;
+        private ID3D11PixelShader? pixelShader;
+        private ID3D11SamplerState? fontSampler;
+        private ID3D11RasterizerState? rasterizerState;
+        private ID3D11BlendState? blendState;
+        private ID3D11DepthStencilState? depthStencilState;
+        private int vertexBufferSize = 5000, indexBufferSize = 10000;
+        private readonly Dictionary<IntPtr, ID3D11ShaderResourceView> textureResources = new();
 
         public ImGuiRenderer(ID3D11Device device, ID3D11DeviceContext deviceContext, int width, int height)
         {
@@ -129,7 +127,7 @@
             // Setup orthographic projection matrix into our constant buffer
             // Our visible imgui space lies from draw_data.DisplayPos (top left) to draw_data.DisplayPos+data_data.DisplaySize (bottom right). DisplayPos is (0,0) for single viewport apps.
 
-            var constResource = ctx.Map(constantBuffer, 0, MapMode.WriteDiscard, Vortice.Direct3D11.MapFlags.None);
+            var constResource = ctx.Map(constantBuffer!, 0, MapMode.WriteDiscard, Vortice.Direct3D11.MapFlags.None);
             var span = constResource.AsSpan<float>(VertexConstantBufferSize);
             float L = data.DisplayPos.X;
             float R = data.DisplayPos.X + data.DisplaySize.X;
@@ -208,21 +206,6 @@
             ImGui.GetIO().DisplaySize = new Vector2(width, height);
         }
 
-        public IntPtr CreateImageTexture(Image<Rgba32> image, Format format)
-        {
-            var texDesc = new Texture2DDescription(format, image.Width, image.Height, 1, 1);
-            if (!image.DangerousTryGetSinglePixelMemory(out Memory<Rgba32> memory))
-            {
-                throw new Exception("Make sure to initialize MemoryAllocator.Default!");
-            }
-
-            using MemoryHandle imageMemoryHandle = memory.Pin();
-            var subResource = new SubresourceData(imageMemoryHandle.Pointer, texDesc.Width * 4);
-            using var texture = device.CreateTexture2D(texDesc, new[] { subResource });
-            var resViewDesc = new ShaderResourceViewDescription(texture, ShaderResourceViewDimension.Texture2D, format, 0, texDesc.MipLevels);
-            return RegisterTexture(device.CreateShaderResourceView(texture, resViewDesc));
-        }
-
         public bool RemoveImageTexture(IntPtr handle)
         {
             using var tex = this.DeRegisterTexture(handle);
@@ -246,7 +229,7 @@
             ctx.RSSetViewport(viewport);
             int stride = sizeof(ImDrawVert);
             ctx.IASetInputLayout(inputLayout);
-            ctx.IASetVertexBuffer(0, vertexBuffer, stride);
+            ctx.IASetVertexBuffer(0, vertexBuffer!, stride);
             ctx.IASetIndexBuffer(indexBuffer, sizeof(ImDrawIdx) == 2 ? Format.R16_UInt : Format.R32_UInt, 0);
             ctx.IASetPrimitiveTopology(PrimitiveTopology.TriangleList);
             ctx.VSSetShader(vertexShader);
@@ -299,14 +282,15 @@
         IntPtr RegisterTexture(ID3D11ShaderResourceView texture)
         {
             var imguiID = texture.NativePointer;
-            textureResources.TryAdd(imguiID, texture);
+            textureResources.Add(imguiID, texture);
             return imguiID;
         }
 
         ID3D11ShaderResourceView? DeRegisterTexture(IntPtr texturePtr)
         {
-            if (textureResources.Remove(texturePtr, out var texture))
+            if (textureResources.TryGetValue(texturePtr, out var texture))
             {
+                textureResources.Remove(texturePtr);
                 return texture;
             }
 
